@@ -543,36 +543,36 @@ function InvoiceTemplate() {
   }, [navigate]);
   
   // Function to handle company logo upload
-  const handleLogoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64Image = event.target.result;
-        setCompanyLogo(base64Image);
-        localStorage.setItem('companyLogo', base64Image);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+const handleLogoUpload = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Image = event.target.result;
+      setCompanyLogo(base64Image);
+      localStorage.setItem('companyLogo', base64Image);
+    };
+    reader.readAsDataURL(file);
+  }
+};
 
   const printInvoice = () => {
     window.print();
   };
 
   // Function to handle signature upload
-  const handleSignatureUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64Image = event.target.result;
-        setSignatureImage(base64Image);
-        localStorage.setItem('signatureImage', base64Image);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+const handleSignatureUpload = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Image = event.target.result;
+      setSignatureImage(base64Image);
+      localStorage.setItem('signatureImage', base64Image);
+    };
+    reader.readAsDataURL(file);
+  }
+};
 
   if (!invoiceData) {
     return (
@@ -635,45 +635,44 @@ function InvoiceTemplate() {
         </PDFDownloadLink>
         <Button variant="secondary" onClick={() => navigate('/')} className="me-2">Back to Editor</Button>
         
-        {/* Signature upload button */}
-        <div className="btn btn-info btn-file position-relative me-2">
-          {signatureImage ? "Change Signature" : "Add Signature"}
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={handleSignatureUpload} 
-            style={{ 
-              position: 'absolute', 
-              opacity: 0, 
-              top: 0, 
-              left: 0, 
-              width: '100%', 
-              height: '100%', 
-              cursor: 'pointer' 
-            }} 
-          />
-        </div>
+       {/* Signature upload button */}
+<div className="btn btn-info btn-file position-relative me-2">
+  {signatureImage ? "Change Signature" : "Add Signature"}
+  <input 
+    type="file" 
+    accept="image/*" 
+    onChange={handleSignatureUpload} 
+    style={{ 
+      position: 'absolute', 
+      opacity: 0, 
+      top: 0, 
+      left: 0, 
+      width: '100%', 
+      height: '100%', 
+      cursor: 'pointer' 
+    }} 
+  />
+</div>
         
-        {/* Logo upload button */}
-        <div className="btn btn-warning btn-file position-relative">
-          {companyLogo ? "Change Logo" : "Add Logo"}
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={handleLogoUpload} 
-            style={{ 
-              position: 'absolute', 
-              opacity: 0, 
-              top: 0, 
-              left: 0, 
-              width: '100%', 
-              height: '100%', 
-              cursor: 'pointer' 
-            }}
-          />
-        </div>
-      </div>
-      
+{/* Logo upload button */}
+<div className="btn btn-warning btn-file position-relative">
+  {companyLogo ? "Change Logo" : "Add Logo"}
+  <input 
+    type="file" 
+    accept="image/*" 
+    onChange={handleLogoUpload} 
+    style={{ 
+      position: 'absolute', 
+      opacity: 0, 
+      top: 0, 
+      left: 0, 
+      width: '100%', 
+      height: '100%', 
+      cursor: 'pointer' 
+    }}
+  />
+</div>
+</div>
       {/* A4 sized invoice template */}
       <div 
         ref={invoiceRef} 
