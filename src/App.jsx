@@ -7,7 +7,8 @@ import {
   Form, 
   Button, 
   Table,
-  InputGroup
+  InputGroup,
+  Dropdown
 } from 'react-bootstrap';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -42,16 +43,21 @@ function GSTInvoiceGenerator() {
     state: '',
     stateCode: '',
   });
+
+  // State for cached customer entries
+  const [cachedCustomers, setCachedCustomers] = useState([]);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+
   // Add this right after the other useState declarations in GSTInvoiceGenerator
-const [companyInfo] = useState({
-  name: 'MEENA TRADERS',
-  tagline: 'YARN & WARP TRADERS',
-  address: 'Ground Floor, 56/8 Mu Su Thottannan Kadu,\nKarungalpatti Main Road, Gugai, SALEM - 636 006.',
-  gstin: '33RVLPS4153P1ZG',
-  state: 'Tamilnadu',
-  stateCode: '33',
-  phone: '63803 86768'
-});
+  const [companyInfo] = useState({
+    name: 'MEENA TRADERS',
+    tagline: 'YARN & WARP TRADERS',
+    address: 'Ground Floor, 56/8 Mu Su Thottannan Kadu,\nKarungalpatti Main Road, Gugai, SALEM - 636 006.',
+    gstin: '33RVLPS4153P1ZG',
+    state: 'Tamilnadu',
+    stateCode: '33',
+    phone: '63803 86768'
+  });
   const [invoiceInfo, setInvoiceInfo] = useState({
     number: '',
     date: new Date().toISOString().split('T')[0],
@@ -62,6 +68,14 @@ const [companyInfo] = useState({
   const [totalTax, setTotalTax] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
   const [amountInWords, setAmountInWords] = useState('Rupees Zero Only');
+
+  // Load cached customers from localStorage when component mounts
+  useEffect(() => {
+    const savedCustomers = localStorage.getItem('cachedCustomers');
+    if (savedCustomers) {
+      setCachedCustomers(JSON.parse(savedCustomers));
+    }
+  }, []);
 
   // Helper functions
   const calculateAmount = (weight, quantity, rate) => {
@@ -140,6 +154,50 @@ const [companyInfo] = useState({
     });
   };
 
+  // Save current customer to cache
+  const saveCustomerToCache = () => {
+    // Only save if at least customer name is provided
+    if (customerInfo.name.trim()) {
+      // Check if customer already exists in cache
+      const existingCustomerIndex = cachedCustomers.findIndex(
+        customer => customer.name === customerInfo.name
+      );
+
+      let updatedCachedCustomers = [...cachedCustomers];
+      
+      if (existingCustomerIndex >= 0) {
+        // Update existing customer
+        updatedCachedCustomers[existingCustomerIndex] = {...customerInfo};
+      } else {
+        // Add new customer
+        updatedCachedCustomers = [...cachedCustomers, {...customerInfo}];
+      }
+      
+      // Update state and localStorage
+      setCachedCustomers(updatedCachedCustomers);
+      localStorage.setItem('cachedCustomers', JSON.stringify(updatedCachedCustomers));
+      
+      alert("Customer details saved to cache!");
+    } else {
+      alert("Please enter at least the customer name before saving");
+    }
+  };
+
+  // Handle selecting customer from dropdown
+  const selectCustomer = (customer) => {
+    setCustomerInfo(customer);
+    setShowCustomerDropdown(false);
+  };
+
+  // Handle clear customer cache
+  const clearCustomerCache = () => {
+    if (window.confirm("Are you sure you want to clear all cached customers?")) {
+      setCachedCustomers([]);
+      localStorage.removeItem('cachedCustomers');
+      alert("Customer cache cleared successfully");
+    }
+  };
+
   // Handle item changes
   const handleItemChange = (id, field, value) => {
     const updatedItems = items.map(item => {
@@ -205,50 +263,61 @@ const [companyInfo] = useState({
       return;
     }
     
-   // Collect all invoice data
-   const invoiceData = {
-    // Company details (add this)
-    companyName: companyInfo.name,
-    companyTagline: companyInfo.tagline,
-    companyAddress: companyInfo.address,
-    companyGstin: companyInfo.gstin,
-    companyState: companyInfo.state,
-    companyStateCode: companyInfo.stateCode,
-    companyPhone: companyInfo.phone,
+    // Save current customer to cache automatically when generating invoice
+    const existingCustomerIndex = cachedCustomers.findIndex(
+      customer => customer.name === customerInfo.name
+    );
     
-    // Customer details
-    customerName: customerInfo.name,
-    customerAddress: customerInfo.address,
-    customerGstin: customerInfo.gstin,
-    customerState: customerInfo.state,
-    customerStateCode: customerInfo.stateCode,
+    if (existingCustomerIndex === -1 && customerInfo.name.trim()) {
+      const updatedCachedCustomers = [...cachedCustomers, {...customerInfo}];
+      setCachedCustomers(updatedCachedCustomers);
+      localStorage.setItem('cachedCustomers', JSON.stringify(updatedCachedCustomers));
+    }
     
-    // Invoice details
-    invoiceNumber: invoiceInfo.number,
-    invoiceDate: invoiceInfo.date,
+    // Collect all invoice data
+    const invoiceData = {
+      // Company details (add this)
+      companyName: companyInfo.name,
+      companyTagline: companyInfo.tagline,
+      companyAddress: companyInfo.address,
+      companyGstin: companyInfo.gstin,
+      companyState: companyInfo.state,
+      companyStateCode: companyInfo.stateCode,
+      companyPhone: companyInfo.phone,
+      
+      // Customer details
+      customerName: customerInfo.name,
+      customerAddress: customerInfo.address,
+      customerGstin: customerInfo.gstin,
+      customerState: customerInfo.state,
+      customerStateCode: customerInfo.stateCode,
+      
+      // Invoice details
+      invoiceNumber: invoiceInfo.number,
+      invoiceDate: invoiceInfo.date,
+      
+      // Items
+      items: items,
+      
+      // Tax details
+      cgstRate,
+      sgstRate,
+      subtotal,
+      cgstAmount,
+      sgstAmount,
+      roundOff,
+      grandTotal,
+      
+      // Amount in words
+      amountInWords
+    };
     
-    // Items
-    items: items,
+    // Store invoice data in localStorage to access it from the template
+    localStorage.setItem('invoiceData', JSON.stringify(invoiceData));
     
-    // Tax details
-    cgstRate,
-    sgstRate,
-    subtotal,
-    cgstAmount,
-    sgstAmount,
-    roundOff,
-    grandTotal,
-    
-    // Amount in words
-    amountInWords
+    // Navigate to the invoice template page
+    navigate('/invoice');
   };
-  
-  // Store invoice data in localStorage to access it from the template
-  localStorage.setItem('invoiceData', JSON.stringify(invoiceData));
-  
-  // Navigate to the invoice template page
-  navigate('/invoice');
-};
 
   // Update totals whenever relevant values change
   useEffect(() => {
@@ -277,7 +346,64 @@ const [companyInfo] = useState({
         <Col md={6}>
           <Card>
             <Card.Body>
-              <Card.Title as="h5">Details of Receiver / Billed to</Card.Title>
+              <Card.Title as="h5" className="d-flex justify-content-between align-items-center">
+                <span>Details of Receiver / Billed to</span>
+                <div>
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm" 
+                    className="me-2"
+                    onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
+                  >
+                    {showCustomerDropdown ? "Hide List" : "Show List"}
+                  </Button>
+                  <Button 
+                    variant="outline-success" 
+                    size="sm"
+                    onClick={saveCustomerToCache}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </Card.Title>
+              
+              {showCustomerDropdown && (
+                <div className="mb-3">
+                  <div className="mb-2">
+                    <strong>Cached Customers:</strong>
+                    {cachedCustomers.length === 0 && (
+                      <span className="ms-2 text-muted">No saved customers</span>
+                    )}
+                  </div>
+                  
+                  <div className="border rounded p-2" style={{maxHeight: '150px', overflowY: 'auto'}}>
+                    {cachedCustomers.map((customer, index) => (
+                      <div 
+                        key={index} 
+                        className="p-2 border-bottom customer-item" 
+                        onClick={() => selectCustomer(customer)}
+                        style={{cursor: 'pointer'}}
+                      >
+                        <strong>{customer.name}</strong>
+                        {customer.gstin && <div><small>GSTIN: {customer.gstin}</small></div>}
+                      </div>
+                    ))}
+                    
+                    {cachedCustomers.length > 0 && (
+                      <div className="pt-2 d-flex justify-content-end">
+                        <Button 
+                          variant="outline-danger" 
+                          size="sm"
+                          onClick={clearCustomerCache}
+                        >
+                          Clear All
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
               <Form>
                 <Row className="mb-2">
                   <Col sm={4}>
