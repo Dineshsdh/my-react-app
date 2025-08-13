@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { 
   Container, 
   Row, 
@@ -8,11 +8,23 @@ import {
   Button, 
   Table,
   InputGroup,
-  Dropdown
+  Dropdown,
+  Spinner
 } from 'react-bootstrap';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import InvoiceTemplate from './InvoiceTemplate';
+
+// Lazy load the InvoiceTemplate component
+const InvoiceTemplate = lazy(() => import('./InvoiceTemplate'));
+
+// Loading component for Suspense
+const LoadingSpinner = () => (
+  <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
+    <Spinner animation="border" role="status">
+      <span className="visually-hidden">Loading...</span>
+    </Spinner>
+  </Container>
+);
 
 // Main App component with routing
 function App() {
@@ -20,7 +32,14 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<GSTInvoiceGenerator />} />
-        <Route path="/invoice" element={<InvoiceTemplate />} />
+        <Route 
+          path="/invoice" 
+          element={
+            <Suspense fallback={<LoadingSpinner />}>
+              <InvoiceTemplate />
+            </Suspense>
+          } 
+        />
       </Routes>
     </Router>
   );
