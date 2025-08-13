@@ -6,22 +6,23 @@ import {
   Card, 
   Form, 
   Button, 
-  Table,
-  InputGroup,
-  Dropdown
+  Table
 } from 'react-bootstrap';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import InvoiceTemplate from './InvoiceTemplate';
+import { listCustomers as apiListCustomers, saveCustomer as apiSaveCustomer, clearAllCustomers as apiClearAllCustomers, createInvoice as apiCreateInvoice } from './api';
+
+const InvoiceTemplate = React.lazy(() => import('./InvoiceTemplate'));
 
 // Main App component with routing
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<GSTInvoiceGenerator />} />
-        <Route path="/invoice" element={<InvoiceTemplate />} />
-      </Routes>
+      <React.Suspense fallback={<div style={{ padding: 24 }}>Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<GSTInvoiceGenerator />} />
+          <Route path="/invoice" element={<InvoiceTemplate />} />
+        </Routes>
+      </React.Suspense>
     </Router>
   );
 }
@@ -69,12 +70,24 @@ function GSTInvoiceGenerator() {
   const [grandTotal, setGrandTotal] = useState(0);
   const [amountInWords, setAmountInWords] = useState('Rupees Zero Only');
 
-  // Load cached customers from localStorage when component mounts
+  // Load customers from API with localStorage fallback
   useEffect(() => {
-    const savedCustomers = localStorage.getItem('cachedCustomers');
-    if (savedCustomers) {
-      setCachedCustomers(JSON.parse(savedCustomers));
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const customers = await apiListCustomers();
+        if (!cancelled) {
+          setCachedCustomers(customers);
+          localStorage.setItem('cachedCustomers', JSON.stringify(customers));
+        }
+      } catch (e) {
+        const savedCustomers = localStorage.getItem('cachedCustomers');
+        if (!cancelled && savedCustomers) {
+          setCachedCustomers(JSON.parse(savedCustomers));
+        }
+      }
+    })();
+    return () => { cancelled = true };
   }, []);
 
   // Helper functions
@@ -154,32 +167,28 @@ function GSTInvoiceGenerator() {
     });
   };
 
-  // Save current customer to cache
-  const saveCustomerToCache = () => {
-    // Only save if at least customer name is provided
-    if (customerInfo.name.trim()) {
-      // Check if customer already exists in cache
-      const existingCustomerIndex = cachedCustomers.findIndex(
-        customer => customer.name === customerInfo.name
-      );
-
-      let updatedCachedCustomers = [...cachedCustomers];
-      
-      if (existingCustomerIndex >= 0) {
-        // Update existing customer
-        updatedCachedCustomers[existingCustomerIndex] = {...customerInfo};
-      } else {
-        // Add new customer
-        updatedCachedCustomers = [...cachedCustomers, {...customerInfo}];
-      }
-      
-      // Update state and localStorage
-      setCachedCustomers(updatedCachedCustomers);
-      localStorage.setItem('cachedCustomers', JSON.stringify(updatedCachedCustomers));
-      
-      alert("Customer details saved to cache!");
-    } else {
+  // Save current customer to backend (with local fallback)
+  const saveCustomerToCache = async () => {
+    if (!customerInfo.name.trim()) {
       alert("Please enter at least the customer name before saving");
+      return;
+    }
+    try {
+      const saved = await apiSaveCustomer(customerInfo);
+      const existingIndex = cachedCustomers.findIndex(c => c.name === saved.name);
+      const next = [...cachedCustomers];
+      if (existingIndex >= 0) next[existingIndex] = saved; else next.push(saved);
+      setCachedCustomers(next);
+      localStorage.setItem('cachedCustomers', JSON.stringify(next));
+      alert('Customer saved');
+    } catch (e) {
+      // Fallback: update local list only
+      const existingIndex = cachedCustomers.findIndex(c => c.name === customerInfo.name);
+      const next = [...cachedCustomers];
+      if (existingIndex >= 0) next[existingIndex] = { ...customerInfo }; else next.push({ ...customerInfo });
+      setCachedCustomers(next);
+      localStorage.setItem('cachedCustomers', JSON.stringify(next));
+      alert('Saved locally (offline)');
     }
   };
 
@@ -189,12 +198,18 @@ function GSTInvoiceGenerator() {
     setShowCustomerDropdown(false);
   };
 
-  // Handle clear customer cache
-  const clearCustomerCache = () => {
-    if (window.confirm("Are you sure you want to clear all cached customers?")) {
+  // Handle clear customer cache on server with local fallback
+  const clearCustomerCache = async () => {
+    if (!window.confirm("Are you sure you want to clear all cached customers?")) return;
+    try {
+      await apiClearAllCustomers();
       setCachedCustomers([]);
       localStorage.removeItem('cachedCustomers');
-      alert("Customer cache cleared successfully");
+      alert('Customer cache cleared');
+    } catch (e) {
+      setCachedCustomers([]);
+      localStorage.removeItem('cachedCustomers');
+      alert('Cleared local cache (offline)');
     }
   };
 
@@ -246,37 +261,23 @@ function GSTInvoiceGenerator() {
     setRoundOff(calculatedRoundOff);
   };
 
-  const generateInvoice = () => {
+  const generateInvoice = async () => {
     // Validation
     if (!customerInfo.name) {
       alert('Please enter customer name');
       return;
     }
-    
     if (!invoiceInfo.number) {
       alert('Please enter invoice number');
       return;
     }
-    
     if (items.length === 0 || subtotal === 0) {
       alert('Please add at least one item with quantity and rate');
       return;
     }
-    
-    // Save current customer to cache automatically when generating invoice
-    const existingCustomerIndex = cachedCustomers.findIndex(
-      customer => customer.name === customerInfo.name
-    );
-    
-    if (existingCustomerIndex === -1 && customerInfo.name.trim()) {
-      const updatedCachedCustomers = [...cachedCustomers, {...customerInfo}];
-      setCachedCustomers(updatedCachedCustomers);
-      localStorage.setItem('cachedCustomers', JSON.stringify(updatedCachedCustomers));
-    }
-    
+
     // Collect all invoice data
     const invoiceData = {
-      // Company details (add this)
       companyName: companyInfo.name,
       companyTagline: companyInfo.tagline,
       companyAddress: companyInfo.address,
@@ -284,22 +285,14 @@ function GSTInvoiceGenerator() {
       companyState: companyInfo.state,
       companyStateCode: companyInfo.stateCode,
       companyPhone: companyInfo.phone,
-      
-      // Customer details
       customerName: customerInfo.name,
       customerAddress: customerInfo.address,
       customerGstin: customerInfo.gstin,
       customerState: customerInfo.state,
       customerStateCode: customerInfo.stateCode,
-      
-      // Invoice details
       invoiceNumber: invoiceInfo.number,
       invoiceDate: invoiceInfo.date,
-      
-      // Items
       items: items,
-      
-      // Tax details
       cgstRate,
       sgstRate,
       subtotal,
@@ -307,15 +300,26 @@ function GSTInvoiceGenerator() {
       sgstAmount,
       roundOff,
       grandTotal,
-      
-      // Amount in words
       amountInWords
     };
-    
-    // Store invoice data in localStorage to access it from the template
+
+    // Persist customer and invoice to backend (with local fallback)
+    try {
+      await apiSaveCustomer({
+        name: customerInfo.name,
+        address: customerInfo.address,
+        gstin: customerInfo.gstin,
+        state: customerInfo.state,
+        stateCode: customerInfo.stateCode,
+      });
+      await apiCreateInvoice(invoiceData);
+    } catch (e) {
+      // ignore, still allow navigation with local copy
+    }
+
+    // Store invoice data locally for template view
     localStorage.setItem('invoiceData', JSON.stringify(invoiceData));
-    
-    // Navigate to the invoice template page
+
     navigate('/invoice');
   };
 
