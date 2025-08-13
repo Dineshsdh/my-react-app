@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Table, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import 'bootstrap/dist/css/bootstrap.min.css';
 import { PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer';
 
 // Define styles for PDF content with optimized spacing and font sizes
@@ -785,7 +784,7 @@ const handleSignatureUpload = (e) => {
             {/* Add empty rows to maintain consistent layout */}
             {Array.from({ length: Math.max(0, 8 - items.length) }, (_, i) => (
               <tr key={`empty-${i}`}>
-                <td>&nbsp;</td>012
+                <td>&nbsp;</td>
                 <td></td>
                 <td></td>
                 <td></td>
