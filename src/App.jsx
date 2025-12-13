@@ -12,6 +12,8 @@ import {
 } from 'react-bootstrap';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import InvoiceTemplate from './InvoiceTemplate';
 
 // Main App component with routing
@@ -33,8 +35,8 @@ function GSTInvoiceGenerator() {
   const [items, setItems] = useState([
     { id: '1', description: '', weight: '0', hsnCode: '', quantity: 0, rate: 0, amount: 0 }
   ]);
-  const [cgstRate, setCgstRate] = useState(9);
-  const [sgstRate, setSgstRate] = useState(9);
+  const [cgstRate, setCgstRate] = useState(2.5);
+  const [sgstRate, setSgstRate] = useState(2.5);
   const [roundOff, setRoundOff] = useState(0);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
@@ -60,7 +62,7 @@ function GSTInvoiceGenerator() {
   });
   const [invoiceInfo, setInvoiceInfo] = useState({
     number: '',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date(),
   });
   const [subtotal, setSubtotal] = useState(0);
   const [cgstAmount, setCgstAmount] = useState(0);
@@ -504,11 +506,14 @@ function GSTInvoiceGenerator() {
                     <Form.Label>Invoice Date:</Form.Label>
                   </Col>
                   <Col sm={8}>
-                    <Form.Control 
-                      type="date"
-                      value={invoiceInfo.date}
-                      onChange={(e) => handleInvoiceInfoChange('date', e.target.value)}
+                    <DatePicker
+                      selected={invoiceInfo.date}
+                      onChange={(date) => handleInvoiceInfoChange('date', date)}
+                      dateFormat="dd/MM/yyyy"
+                      className="form-control"
+                      
                     />
+
                   </Col>
                 </Row>
               </Form>
