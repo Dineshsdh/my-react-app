@@ -37,23 +37,35 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     flexDirection: 'column',
-    width: '40%',
     alignItems: 'flex-end',
+    justifyContent: 'center', // Center vertically
   },
   headerText: {
     flexDirection: 'column',
     alignItems: 'center', // Center text horizontally
+    flex: 1, // Take available space to center properly
+    textAlign: 'center',
   },
   companyName: {
-    fontSize: 16, // Reduced from 18
+    fontSize: 28, // Reduced from 18
     fontWeight: 'bold',
+    fontFamily: 'Times-Roman',
     marginBottom: 3, // Reduced from 5
     color: '#0d6efd',
+    textAlign: 'center',
+    alignitems:'center',
   },
   companyTagline: {
     fontSize: 12, // Reduced from 14
     fontWeight: 'bold',
     marginBottom: 3, // Reduced from 5
+    textAlign: 'center',
+  },
+  companyAddress: {
+    fontSize: 10,
+    fontFamily: 'Helvetica',
+    marginBottom: 2,
+    textAlign: 'center',
   },
   taxInvoice: {
     fontSize: 12, // Reduced from 14
@@ -122,11 +134,12 @@ const styles = StyleSheet.create({
     borderRightColor: '#dee2e6',
   },
   colSNo: { width: '5%' },
-  colDesc: { width: '45%' },
+  colDesc: { width: '30%' },
   colHSN: { width: '10%' },
+  colWeight: { width: '10%' },
   colQty: { width: '10%' },
-  colRate: { width: '15%' },
-  colAmount: { width: '15%' },
+  colRate: { width: '10%' },
+  colAmount: { width: '25%' },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -206,6 +219,16 @@ const InvoicePDF = ({ invoiceData }) => {
   
   const addressLines = companyAddress.split('\n');
 
+  // Function to format date to DD-MM-YYYY
+  const formatDate = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
   // Calculate number of rows needed in the items table
   const itemsLength = items.length;
   const emptyRowsNeeded = Math.max(0, 3 - itemsLength); // Reduced to 3 empty rows
@@ -215,26 +238,26 @@ const InvoicePDF = ({ invoiceData }) => {
       <Page size="A4" style={styles.page}>
         {/* Updated Header with Logo */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {/* Company Logo */}
-            {companyLogo ? (
-              <Image
-                src={companyLogo}
-                style={styles.logo}
-              />
-            ) : (
-              <View style={styles.logo} /> // Empty placeholder if no logo
-            )}
-            
-            {/* Company Text - Centered */}
-            <View style={styles.headerText}>
-              <Text style={styles.companyName}>{companyName}</Text>
-              <Text style={styles.companyTagline}>{companyTagline}</Text>
-              {addressLines.map((line, i) => (
-                <Text key={i}>{line}</Text>
-              ))}
-            </View>
+          {/* Company Logo on Left */}
+          {companyLogo ? (
+            <Image
+              src={companyLogo}
+              style={styles.logo}
+            />
+          ) : (
+            <View style={styles.logo} /> // Empty placeholder if no logo
+          )}
+          
+          {/* Company Text - Centered */}
+          <View style={styles.headerText}>
+            <Text style={styles.companyName}>{companyName}</Text>
+            <Text style={styles.companyTagline}>{companyTagline}</Text>
+            {addressLines.map((line, i) => (
+              <Text key={i} style={styles.companyAddress}>{line}</Text>
+            ))}
           </View>
+          
+          {/* TAX INVOICE on Right */}
           <View style={styles.headerRight}>
             <Text style={styles.taxInvoice}>TAX INVOICE</Text>
             <Text>Cell: {companyPhone}</Text>
@@ -252,8 +275,14 @@ const InvoicePDF = ({ invoiceData }) => {
             <Text><Text style={{ fontWeight: 'bold' }}>State Code:</Text> {companyStateCode}</Text>
           </View>
           <View style={{ width: '40%', alignItems: 'flex-end' }}>
-            <Text><Text style={{ fontWeight: 'bold' }}>Invoice No:</Text> {invoiceNumber}</Text>
-            <Text><Text style={{ fontWeight: 'bold' }}>Invoice Date:</Text> {invoiceDate}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '50%' }}>
+              <Text style={{ fontWeight: 'bold' }}>Invoice No:</Text>
+              <Text>{invoiceNumber}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '50%' }}>
+              <Text style={{ fontWeight: 'bold' }}>Invoice Date:</Text>
+              <Text>{formatDate(invoiceDate)}</Text>
+            </View>
           </View>
         </View>
 
@@ -329,6 +358,9 @@ const InvoicePDF = ({ invoiceData }) => {
             <View style={[styles.tableCol, styles.colHSN]}>
               <Text>HSN Code</Text>
             </View>
+            <View style={[styles.tableCol, styles.colWeight]}>
+              <Text>Weight</Text>
+            </View>
             <View style={[styles.tableCol, styles.colQty]}>
               <Text>Qty</Text>
             </View>
@@ -347,10 +379,13 @@ const InvoicePDF = ({ invoiceData }) => {
                 <Text>{index + 1}</Text>
               </View>
               <View style={[styles.tableCol, styles.colDesc]}>
-                <Text>{item.description} {item.weight ? `(${item.weight})` : ''}</Text>
+                <Text>{item.description}</Text>
               </View>
               <View style={[styles.tableCol, styles.colHSN]}>
                 <Text>{item.hsnCode}</Text>
+              </View>
+              <View style={[styles.tableCol, styles.colWeight]}>
+                <Text>{item.weight || ''}</Text>
               </View>
               <View style={[styles.tableCol, styles.colQty]}>
                 <Text>{item.quantity}</Text>
@@ -376,6 +411,9 @@ const InvoicePDF = ({ invoiceData }) => {
               <View style={[styles.tableCol, styles.colHSN]}>
                 <Text> </Text>
               </View>
+              <View style={[styles.tableCol, styles.colWeight]}>
+                <Text> </Text>
+              </View>
               <View style={[styles.tableCol, styles.colQty]}>
                 <Text> </Text>
               </View>
@@ -390,7 +428,7 @@ const InvoicePDF = ({ invoiceData }) => {
           
           {/* Total row */}
           <View style={styles.tableRow}>
-            <View style={[styles.tableCol, { width: '85%' }]}>
+            <View style={[styles.tableCol, { width: '75%' }]}>
               <Text style={{ fontWeight: 'bold', textAlign: 'right' }}>TOTAL BEFORE TAX</Text>
             </View>
             <View style={[styles.tableCol, styles.colAmount]}>
@@ -730,7 +768,14 @@ const handleSignatureUpload = (e) => {
           </Col>
           <Col md={6} className="text-end">
             <p className="mb-1"><strong>Invoice No:</strong> {invoiceNumber}</p>
-            <p className="mb-1"><strong>Invoice Date:</strong> {invoiceDate}</p>
+            <p className="mb-1"><strong>Invoice Date:</strong> {(() => {
+              if (!invoiceDate) return '';
+              const d = new Date(invoiceDate);
+              const day = String(d.getDate()).padStart(2, '0');
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const year = d.getFullYear();
+              return `${day}-${month}-${year}`;
+            })()}</p>
           </Col>
         </Row>
         <Row className="mb-3">
@@ -766,6 +811,7 @@ const handleSignatureUpload = (e) => {
               <th>S. No.</th>
               <th>Product Description</th>
               <th>HSN Code</th>
+              <th>Weight</th>
               <th>Qty</th>
               <th>Rate</th>
               <th>Amount Rs.</th>
@@ -775,8 +821,9 @@ const handleSignatureUpload = (e) => {
             {items.map((item, index) => (
               <tr key={item.id}>
                 <td>{index + 1}</td>
-                <td>{item.description} {item.weight ? `(${item.weight})` : ''}</td>
+                <td>{item.description}</td>
                 <td>{item.hsnCode}</td>
+                <td>{item.weight || ''}</td>
                 <td>{item.quantity}</td>
                 <td>₹{item.rate.toFixed(2)}</td>
                 <td>₹{item.amount.toFixed(2)}</td>
@@ -790,11 +837,10 @@ const handleSignatureUpload = (e) => {
                 <td></td>
                 <td></td>
                 <td></td>
-                <td></td>
-              </tr>
+                <td></td>                <td></td>              </tr>
             ))}
             <tr>
-              <th colSpan={5} className="text-end">TOTAL BEFORE TAX</th>
+              <th colSpan={6} className="text-end">TOTAL BEFORE TAX</th>
               <th>₹{subtotal.toFixed(2)}</th>
             </tr>
           </tbody>
